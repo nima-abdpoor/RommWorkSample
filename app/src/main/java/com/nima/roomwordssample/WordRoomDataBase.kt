@@ -1,24 +1,61 @@
-package com.nima.roomwordssample
-
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.nima.roomwordssample.Word
+import com.nima.roomwordssample.WordDao
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
-@Database(entities = [Word::class],version = 1,exportSchema = true)
-public abstract class WordRoomDataBase : RoomDatabase(){
-    abstract fun wordDoa() : WordDao
+@Database(entities = [Word::class], version = 1, exportSchema = false)
+abstract class WordRoomDataBase : RoomDatabase() {
 
-    companion object{
+    abstract fun wordDao(): WordDao
+
+    private class WordDatabaseCallback(
+        private val scope: CoroutineScope
+    ) : RoomDatabase.Callback() {
+
+        override fun onOpen(db: SupportSQLiteDatabase) {
+            super.onOpen(db)
+            INSTANCE?.let { database ->
+                scope.launch {
+                    var wordDao = database.wordDao()
+
+                    // Delete all content here.
+                    wordDao.deleteAll()
+
+                    // Add sample words.
+                    var word = Word("Hello")
+                    wordDao.insert(word)
+                    word = Word("World!")
+                    wordDao.insert(word)
+                }
+            }
+        }
+    }
+
+    companion object {
         @Volatile
         private var INSTANCE: WordRoomDataBase? = null
 
-        fun getDatabase(context : Context) : WordRoomDataBase{
+        fun getDatabase(
+            context: Context,
+            scope: CoroutineScope
+        ): WordRoomDataBase {
+            // if the INSTANCE is not null, then return it,
+            // if it is, then create the database
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
-                    context, WordRoomDataBase::class.java, "word_database"
-                ).build()
+                    context.applicationContext,
+                    WordRoomDataBase::class.java,
+                    "word_database"
+                )
+                    .addCallback(WordDatabaseCallback(scope))
+                    .build()
                 INSTANCE = instance
+                // return instance
                 instance
             }
         }
