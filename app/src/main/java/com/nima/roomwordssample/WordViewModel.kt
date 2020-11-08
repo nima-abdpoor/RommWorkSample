@@ -13,10 +13,10 @@ class WordViewModel(application: Application) : AndroidViewModel(application){
     // - We can put an observer on the data (instead of polling for changes) and only update the
     //   the UI when the data actually changes.
     // - Repository is completely separated from the UI through the ViewModel.
-    private val allWords: LiveData<List<Word>>
+    val allWords: LiveData<List<Word>>
 
     init {
-        val wordsDao = WordRoomDataBase.getDatabase(application , viewModelScope).wordDoa()
+        val wordsDao = WordRoomDataBase.getDatabase(application , viewModelScope).wordDao()
         repository = WordRepository(wordsDao)
         allWords = repository.allWords
     }
